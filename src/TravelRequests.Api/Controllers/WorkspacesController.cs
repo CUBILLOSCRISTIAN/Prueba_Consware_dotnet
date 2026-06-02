@@ -32,12 +32,8 @@ public class WorkspacesController : ControllerBase
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> GetMembers(Guid id)
     {
-        var resWs = await _workspaceService.GetWorkspaceByIdAsync(id);
-        if (resWs.Errors != null) return StatusCode(resWs.Errors.StatusCode, resWs);
-
-        // Use repository via service? For simplicity, call GetWorkspaceById then rely on repository for members
-        // Not implemented: direct members list; returning workspace info
-        return Ok(resWs);
+        var res = await _workspaceService.GetMembersAsync(id);
+        return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
     }
 
     [HttpPost("{id}/members")]

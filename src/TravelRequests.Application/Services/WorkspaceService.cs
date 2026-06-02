@@ -1,5 +1,6 @@
 using TravelRequests.Domain.Dto.Workspace;
 using TravelRequests.Domain.Entities;
+using TravelRequests.Domain.Enums;
 using TravelRequests.Domain.Repository;
 using TravelRequests.Domain.Services;
 using TravelRequests.Domain.Shared;
@@ -67,6 +68,30 @@ public class WorkspaceService : IWorkspaceService
         return response;
     }
 
+    public async Task<ResponsePackage<List<WorkspaceMemberResponseDto>>> GetMembersAsync(Guid workspaceId)
+    {
+        var response = new ResponsePackage<List<WorkspaceMemberResponseDto>>();
+        var workspace = await _workspaceRepository.GetByIdAsync(workspaceId);
+        if (workspace == null)
+        {
+            response.Errors = new ErrorResponse(404, "Workspace not found");
+            return response;
+        }
+
+        var members = await _workspaceRepository.GetMembersAsync(workspaceId);
+        response.Message = "OK";
+        response.Result = members.Select(member => new WorkspaceMemberResponseDto
+        {
+            UserId = member.UserId,
+            WorkspaceId = member.WorkspaceId,
+            Name = member.Name,
+            Email = member.Email,
+            Role = member.Role,
+            CreatedAt = member.CreatedAt
+        }).ToList();
+        return response;
+    }
+
     public async Task<ResponsePackage<bool>> AddMemberAsync(Guid workspaceId, AddMemberDto dto)
     {
         var response = new ResponsePackage<bool>();
@@ -96,11 +121,14 @@ public class WorkspaceService : IWorkspaceService
             response.Errors = new ErrorResponse(404, "Member not found in workspace");
             return response;
         }
-        // Simple delete: mark as removed by setting IsActive false or delete (we'll delete)
-        _userRepository.Update(user); // no delete method in base, so using Update as placeholder
-        // To actually remove, one might implement a Delete method; for now, set IsActive = false if exists
-        // user.IsActive = false; _userRepository.MarkAsModified(user);
-        await _userRepository.SaveAsync();
+
+        if (user.Role == Role.Owner)
+        {
+            response.Errors = new ErrorResponse(400, "Owner cannot be removed from the workspace");
+            return response;
+        }
+
+        await _userRepository.DeleteAsync(user);
         response.Message = "OK";
         response.Result = true;
         return response;

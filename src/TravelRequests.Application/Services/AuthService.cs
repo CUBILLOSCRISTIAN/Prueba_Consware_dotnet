@@ -14,11 +14,13 @@ namespace TravelRequests.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IWorkspaceRepository _workspaceRepository;
     private readonly IConfiguration _configuration;
 
-    public AuthService(IUserRepository userRepository, IConfiguration configuration)
+    public AuthService(IUserRepository userRepository, IWorkspaceRepository workspaceRepository, IConfiguration configuration)
     {
         _userRepository = userRepository;
+        _workspaceRepository = workspaceRepository;
         _configuration = configuration;
     }
 
@@ -43,8 +45,36 @@ public class AuthService : IAuthService
             Role = Enum.TryParse<TravelRequests.Domain.Enums.Role>(dto.Role, true, out var r) ? r : TravelRequests.Domain.Enums.Role.Requester
         };
 
+        // If no workspace provided, create one and assign
+        if (dto.WorkspaceId == Guid.Empty)
+        {
+            var ws = new Workspace
+            {
+                WorkspaceId = Guid.NewGuid(),
+                Name = dto.Name + "'s workspace",
+                OwnerId = Guid.Empty, // will set after user created
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            };
+            await _workspaceRepository.InsertAsync(ws);
+            await _workspaceRepository.SaveAsync();
+            user.WorkspaceId = ws.WorkspaceId;
+        }
+
         await _userRepository.InsertAsync(user);
         await _userRepository.SaveAsync();
+
+        // If workspace was created, update OwnerId to this user
+        if (dto.WorkspaceId == Guid.Empty)
+        {
+            var ws = await _workspaceRepository.GetByIdAsync(user.WorkspaceId);
+            if (ws != null)
+            {
+                ws.OwnerId = user.UserId;
+                _workspaceRepository.MarkAsModified(ws);
+                await _workspaceRepository.SaveAsync();
+            }
+        }
 
         var token = GenerateToken(user);
         response.Message = "OK";

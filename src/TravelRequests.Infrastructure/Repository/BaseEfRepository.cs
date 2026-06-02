@@ -23,6 +23,12 @@ public class BaseEfRepository<T> : TravelRequests.Domain.Repository.IBaseReposit
 
     public virtual void Update(T entity) => _context.Update(entity);
 
+    public virtual async Task DeleteAsync(T entity)
+    {
+        _entity.Remove(entity);
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<IEnumerable<T>> GetAllAsync() => await _entity.ToListAsync();
 
     public async Task<T?> GetByIdAsync(Guid id) => await _entity.FindAsync(id);
