@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
+using TravelRequests.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +27,10 @@ builder.Services.AddScoped<TravelRequests.Domain.Repository.IWorkspaceRepository
 builder.Services.AddScoped<TravelRequests.Domain.Services.IWorkspaceService, TravelRequests.Application.Services.WorkspaceService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<TravelRequests.Infrastructure.ICurrentWorkspaceProvider, TravelRequests.Infrastructure.CurrentWorkspaceProvider>();
+builder.Services.AddScoped<TravelRequests.Domain.Repository.ITravelRequestRepository, TravelRequests.Infrastructure.Repository.TravelRequestRepository>();
+builder.Services.AddScoped<TravelRequests.Domain.Services.ITravelRiskService, TravelRequests.Application.Services.TravelRiskService>();
+builder.Services.AddScoped<TravelRequests.Domain.Services.ITravelClassifierService, TravelRequests.Application.Services.TravelClassifierService>();
+builder.Services.AddScoped<TravelRequests.Domain.Services.ITravelRequestService, TravelRequests.Application.Services.TravelRequestService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "please-configure-a-secure-key";
@@ -51,6 +57,23 @@ builder.Services.AddAuthentication(options =>
     });
 
 var app = builder.Build();
+
+// Apply EF Core migrations automatically at startup (if DB reachable)
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetService<TravelRequests.Infrastructure.AppDbContext>();
+        if (db != null)
+        {
+            db.Database.Migrate();
+        }
+    }
+    catch
+    {
+        // swallow startup migration errors; useful when DB not yet ready
+    }
+}
 
 if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
