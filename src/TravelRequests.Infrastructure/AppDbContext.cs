@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>().ToTable("user", "dbo");
         modelBuilder.Entity<Workspace>().ToTable("workspace", "dbo");
         modelBuilder.Entity<TravelRequest>().ToTable("travel_request", "dbo");
+        modelBuilder.Entity<Workspace>().OwnsOne(w => w.AIConfig);
 
         // Global query filter for multi-tenant isolation (skip when provider is not set or WorkspaceId is empty)
         if (_workspaceProvider != null)

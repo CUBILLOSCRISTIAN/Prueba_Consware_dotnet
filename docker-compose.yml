@@ -18,11 +18,11 @@ services:
       - mssql
     environment:
       - ConnectionStrings__DefaultConnection=Server=mssql,1433;Initial Catalog=TravelRequestsDb;User ID=sa;Password=Your_password123;TrustServerCertificate=True;
-      - Jwt__Key=CHANGE_THIS_TO_A_SECURE_KEY
+      - Jwt__Key=kG9#vR2!xQ7@Lm8$Np4&Zt6*Yw1^Hs3%Jd5!Bc9@Fe2#Uk7
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
     ports:
-      - "5000:80"
+      - "5050:80"
 
 volumes:
   mssql_data:
