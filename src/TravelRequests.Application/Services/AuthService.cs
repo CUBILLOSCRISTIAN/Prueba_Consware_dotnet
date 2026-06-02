@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -98,6 +99,73 @@ public class AuthService : IAuthService
         return response;
     }
 
+    public async Task<ResponsePackage<PasswordRecoveryResponseDto>> RequestPasswordRecoveryAsync(ForgotPasswordRequestDto dto)
+    {
+        var response = new ResponsePackage<PasswordRecoveryResponseDto>();
+        var user = await _userRepository.GetByEmailAsync(dto.Email);
+        if (user == null)
+        {
+            response.Errors = new ErrorResponse(404, "User not found");
+            return response;
+        }
+
+        var code = GenerateRecoveryCode();
+        var expiresAt = DateTime.UtcNow.AddMinutes(5);
+
+        user.PasswordRecoveryCode = code;
+        user.PasswordRecoveryCodeExpiresAt = expiresAt;
+        _userRepository.MarkAsModified(user);
+        await _userRepository.SaveAsync();
+
+        response.Message = "OK";
+        response.Result = new PasswordRecoveryResponseDto
+        {
+            Email = user.Email,
+            Code = code,
+            ExpiresAt = expiresAt
+        };
+        return response;
+    }
+
+    public async Task<ResponsePackage<PasswordResetResponseDto>> ResetPasswordAsync(ResetPasswordRequestDto dto)
+    {
+        var response = new ResponsePackage<PasswordResetResponseDto>();
+        var user = await _userRepository.GetByEmailAsync(dto.Email);
+        if (user == null)
+        {
+            response.Errors = new ErrorResponse(404, "User not found");
+            return response;
+        }
+
+        if (string.IsNullOrWhiteSpace(user.PasswordRecoveryCode) || user.PasswordRecoveryCodeExpiresAt is null)
+        {
+            response.Errors = new ErrorResponse(400, "Recovery code not generated");
+            return response;
+        }
+
+        if (user.PasswordRecoveryCodeExpiresAt <= DateTime.UtcNow)
+        {
+            response.Errors = new ErrorResponse(400, "Recovery code expired");
+            return response;
+        }
+
+        if (!string.Equals(user.PasswordRecoveryCode, dto.Code, StringComparison.OrdinalIgnoreCase))
+        {
+            response.Errors = new ErrorResponse(400, "Invalid recovery code");
+            return response;
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.PasswordRecoveryCode = null;
+        user.PasswordRecoveryCodeExpiresAt = null;
+        _userRepository.MarkAsModified(user);
+        await _userRepository.SaveAsync();
+
+        response.Message = "OK";
+        response.Result = new PasswordResetResponseDto { PasswordUpdated = true };
+        return response;
+    }
+
     private string GenerateToken(User user)
     {
         var key = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not configured");
@@ -120,5 +188,10 @@ public class AuthService : IAuthService
             expires: DateTime.UtcNow.AddMinutes(expiresMinutes), signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string GenerateRecoveryCode()
+    {
+        return Convert.ToHexString(RandomNumberGenerator.GetBytes(4));
     }
 }

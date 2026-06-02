@@ -46,4 +46,30 @@ public class TravelRequestsController : ControllerBase
         var res = await _service.GetByIdAsync(id);
         return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
     }
+
+    [HttpPost("{id}/approve")]
+    [Authorize(Roles = "Approver")]
+    public async Task<IActionResult> Approve(Guid id)
+    {
+        var userClaim = User.FindFirst("UserId")?.Value;
+        var workspaceClaim = User.FindFirst("workspaceId")?.Value;
+        if (!Guid.TryParse(userClaim, out var userId)) return Unauthorized();
+        if (!Guid.TryParse(workspaceClaim, out var workspaceId)) return Unauthorized();
+
+        var res = await _service.ApproveAsync(id, userId, workspaceId);
+        return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
+    }
+
+    [HttpPost("{id}/reject")]
+    [Authorize(Roles = "Approver")]
+    public async Task<IActionResult> Reject(Guid id)
+    {
+        var userClaim = User.FindFirst("UserId")?.Value;
+        var workspaceClaim = User.FindFirst("workspaceId")?.Value;
+        if (!Guid.TryParse(userClaim, out var userId)) return Unauthorized();
+        if (!Guid.TryParse(workspaceClaim, out var workspaceId)) return Unauthorized();
+
+        var res = await _service.RejectAsync(id, userId, workspaceId);
+        return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
+    }
 }

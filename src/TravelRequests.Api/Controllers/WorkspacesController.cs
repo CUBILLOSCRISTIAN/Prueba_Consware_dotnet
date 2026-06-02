@@ -29,8 +29,16 @@ public class WorkspacesController : ControllerBase
     }
 
     [HttpGet("{id}/members")]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "Owner,Admin")]
     public async Task<IActionResult> GetMembers(Guid id)
+    {
+        var res = await _workspaceService.GetMembersAsync(id);
+        return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
+    }
+
+    [HttpGet("{id}/users")]
+    [Authorize(Roles = "Owner,Admin")]
+    public async Task<IActionResult> GetUsers(Guid id)
     {
         var res = await _workspaceService.GetMembersAsync(id);
         return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);

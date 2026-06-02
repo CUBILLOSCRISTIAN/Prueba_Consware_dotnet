@@ -95,20 +95,35 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Apply EF Core migrations automatically at startup (if DB reachable)
+// Apply EF Core migrations automatically at startup (with retries for SQL Server readiness)
 using (var scope = app.Services.CreateScope())
 {
-    try
+    var db = scope.ServiceProvider.GetService<TravelRequests.Infrastructure.AppDbContext>();
+    if (db != null)
     {
-        var db = scope.ServiceProvider.GetService<TravelRequests.Infrastructure.AppDbContext>();
-        if (db != null)
+        var lastError = (Exception?)null;
+        for (var attempt = 1; attempt <= 5; attempt++)
         {
-            db.Database.Migrate();
+            try
+            {
+                db.Database.Migrate();
+                lastError = null;
+                break;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                if (attempt < 5)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+                }
+            }
         }
-    }
-    catch
-    {
-        // swallow startup migration errors; useful when DB not yet ready
+
+        if (lastError != null)
+        {
+            throw lastError;
+        }
     }
 }
 

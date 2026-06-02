@@ -18,6 +18,10 @@ public class User
 
     public string PasswordHash { get; set; } = string.Empty;
 
+    public string? PasswordRecoveryCode { get; set; }
+
+    public DateTime? PasswordRecoveryCodeExpiresAt { get; set; }
+
     public Role Role { get; set; } = Role.Requester;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

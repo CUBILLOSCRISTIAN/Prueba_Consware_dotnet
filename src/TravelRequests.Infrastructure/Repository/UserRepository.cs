@@ -16,6 +16,6 @@ public class UserRepository : BaseEfRepository<User>, IUserRepository
     // Explicit implementation to satisfy interface
     public async Task<User?> GetByIdAsync(Guid id)
     {
-        return await _entity.FindAsync(id);
+        return await _entity.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == id);
     }
 }

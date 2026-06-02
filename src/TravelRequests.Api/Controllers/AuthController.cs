@@ -28,4 +28,18 @@ public class AuthController : ControllerBase
         var res = await _authService.LoginAsync(dto);
         return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
+    {
+        var res = await _authService.RequestPasswordRecoveryAsync(dto);
+        return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto dto)
+    {
+        var res = await _authService.ResetPasswordAsync(dto);
+        return res.Errors is null ? Ok(res) : StatusCode(res.Errors.StatusCode, res);
+    }
 }

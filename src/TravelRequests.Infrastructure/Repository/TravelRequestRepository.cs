@@ -15,6 +15,6 @@ public class TravelRequestRepository : BaseEfRepository<TravelRequest>, ITravelR
 
     public async Task<TravelRequest?> GetByIdAsync(Guid id)
     {
-        return await _entity.FindAsync(id);
+        return await _entity.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
     }
 }
