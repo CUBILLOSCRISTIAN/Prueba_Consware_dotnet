@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: src/TravelRequests.Api/Dockerfile
+    depends_on:
+      - mssql
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mssql,1433;Initial Catalog=TravelRequestsDb;User ID=sa;Password=Your_password123;TrustServerCertificate=True;
+      - Jwt__Key=kG9#vR2!xQ7@Lm8$Np4&Zt6*Yw1^Hs3%Jd5!Bc9@Fe2#Uk7
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+    ports:
+      - "5050:80"
+
+volumes:
+  mssql_data:
